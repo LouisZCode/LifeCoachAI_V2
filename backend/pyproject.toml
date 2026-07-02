@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic-settings>=2.6",
     "langfuse>=3.0",
+    "sqlalchemy>=2.0",
 ]
 
 [build-system]
