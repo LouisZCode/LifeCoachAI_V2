@@ -85,3 +85,21 @@ export function ErrorNote({ message }: { message: string | null }) {
   if (!message) return null
   return <p className="mt-3 text-sm text-accent">{message}</p>
 }
+
+const chipStyles: Record<string, { label: string; className: string }> = {
+  new: { label: 'New', className: 'bg-parchment text-ink/60' },
+  transcribing: { label: 'Transcribing…', className: 'bg-accent/15 text-accent animate-pulse' },
+  transcribed: { label: 'Transcribed', className: 'bg-heading/15 text-heading' },
+  error: { label: 'Error', className: 'bg-accent text-white' },
+}
+
+export function StatusChip({ status }: { status: string }) {
+  const chip = chipStyles[status] ?? { label: status, className: 'bg-parchment text-ink/60' }
+  return (
+    <span
+      className={`rounded-full px-3 py-1 font-heading text-xs font-bold uppercase tracking-wide ${chip.className}`}
+    >
+      {chip.label}
+    </span>
+  )
+}

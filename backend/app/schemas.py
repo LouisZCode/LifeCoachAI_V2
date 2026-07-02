@@ -29,6 +29,9 @@ class SessionRead(BaseModel):
     session_date: date
     notes: str
     status: str
+    audio_filename: str | None
+    duration_seconds: float | None
+    error_message: str | None
     created_at: datetime
     updated_at: datetime
 

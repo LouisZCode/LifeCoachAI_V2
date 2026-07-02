@@ -39,8 +39,13 @@ class Session(Base):
     title: Mapped[str] = mapped_column(String(200), default="")
     session_date: Mapped[date]
     notes: Mapped[str] = mapped_column(Text, default="")
-    # Lifecycle grows with later phases: new -> transcribed -> docs_ready
+    # Lifecycle: new -> transcribing -> transcribed | error (docs_ready in Phase 3)
     status: Mapped[str] = mapped_column(String(20), default="new")
+    audio_filename: Mapped[str | None] = mapped_column(String(300))
+    audio_path: Mapped[str | None] = mapped_column(String(500))
+    transcript_path: Mapped[str | None] = mapped_column(String(500))
+    duration_seconds: Mapped[float | None]
+    error_message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 

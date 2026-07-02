@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, formatDate } from '../api'
 import type { ClientDetail, Session } from '../api'
-import { Button, Card, ConfirmButton, ErrorNote, Field, Input, TextArea } from '../components/ui'
+import { Button, Card, ConfirmButton, ErrorNote, Field, Input, StatusChip, TextArea } from '../components/ui'
 
 function todayISO(): string {
   const now = new Date()
@@ -126,16 +126,14 @@ function NewSessionForm({ clientId, onCreated }: { clientId: number; onCreated: 
 function SessionRow({ session, onChanged }: { session: Session; onChanged: () => void }) {
   return (
     <div className="flex items-center justify-between border-b border-line py-3 last:border-b-0">
-      <div>
-        <span className="font-heading text-sm font-bold text-ink">
+      <Link to={`/sessions/${session.id}`} className="group flex-1">
+        <span className="font-heading text-sm font-bold text-ink group-hover:text-accent">
           {formatDate(session.session_date)}
         </span>
         {session.title && <span className="ml-3 text-sm text-ink/80">{session.title}</span>}
-      </div>
+      </Link>
       <div className="flex items-center gap-3">
-        <span className="rounded-full bg-parchment px-3 py-1 font-heading text-xs font-bold uppercase tracking-wide text-heading">
-          {session.status}
-        </span>
+        <StatusChip status={session.status} />
         <ConfirmButton
           label="Delete"
           className="!px-2 !py-1 text-xs"

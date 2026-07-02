@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import ClientDetailPage from './pages/ClientDetailPage'
 import ClientsPage from './pages/ClientsPage'
+import SessionPage from './pages/SessionPage'
 import SystemPage from './pages/SystemPage'
 
 export default function App() {
@@ -12,6 +13,7 @@ export default function App() {
           <Route index element={<Navigate to="/clients" replace />} />
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/clients/:id" element={<ClientDetailPage />} />
+          <Route path="/sessions/:id" element={<SessionPage />} />
           <Route path="/system" element={<SystemPage />} />
           <Route path="*" element={<Navigate to="/clients" replace />} />
         </Route>
