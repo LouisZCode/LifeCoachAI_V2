@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand.md — "Holistic Coaching" palette */
+  --color-brand: #2e3b1f; /* Deep Brand Green — sidebar */
+  --color-heading: #4a5d23; /* Brand Green (Text) — headers */
+  --color-accent: #a0522d; /* Terracotta — primary actions */
+  --color-accent-dark: #8a4524; /* Terracotta hover */
+  --color-parchment: #f4f1ea; /* Warm Parchment — main background */
+  --color-cream: #faf9f6; /* Soft Cream — cards & inputs */
+  --color-ink: #2c2c2c; /* Soft Black — body text */
+  --color-line: #e0e0e0; /* Border Gray */
+
+  /* Brand.md — dual typography: sans headers, serif body */
+  --font-heading: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, sans-serif;
+  --font-body: Georgia, "Times New Roman", ui-serif, serif;
+}
+
+@layer base {
+  body {
+    @apply bg-parchment font-body text-ink antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading font-bold text-heading;
+  }
+}
