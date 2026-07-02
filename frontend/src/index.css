@@ -28,3 +28,25 @@
     @apply font-heading font-bold text-heading;
   }
 }
+
+/* Tiptap document editor — brand typography for generated documents */
+@layer components {
+  .doc-editor h1 {
+    @apply mb-3 text-2xl;
+  }
+  .doc-editor h2 {
+    @apply mb-2 mt-6 text-lg;
+  }
+  .doc-editor p {
+    @apply mb-3 text-sm leading-relaxed;
+  }
+  .doc-editor ul {
+    @apply mb-3 list-disc space-y-1 pl-5 text-sm leading-relaxed;
+  }
+  .doc-editor ol {
+    @apply mb-3 list-decimal space-y-1 pl-5 text-sm leading-relaxed;
+  }
+  .doc-editor li p {
+    @apply mb-0;
+  }
+}

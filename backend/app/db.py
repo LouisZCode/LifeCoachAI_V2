@@ -51,6 +51,11 @@ def _migrate(engine) -> None:
         conn.execute(
             text("UPDATE sessions SET status='new' WHERE status='recording'")
         )
+        # Same for doc generation: the job dies with the process, but the
+        # transcript is intact — fall back so Maria can regenerate.
+        conn.execute(
+            text("UPDATE sessions SET status='transcribed' WHERE status='generating'")
+        )
 
 
 def get_db() -> Generator[Session, None, None]:

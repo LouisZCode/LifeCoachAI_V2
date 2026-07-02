@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     recording_sample_rate: int = 16_000
     recording_max_minutes: float = 120.0
 
+    # Document generation — OpenRouter (one key, any model), called via LangChain.
+    # Models are per-stage: a cheap one reads the transcript (analysis), a strong
+    # writing model produces the client-facing prose. Swap in .env, no code change.
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    analysis_model: str = "google/gemini-2.5-flash"
+    writing_model: str = "anthropic/claude-sonnet-5"
+
     # Vite dev server origin (only needed if the frontend bypasses the dev proxy)
     cors_origins: list[str] = ["http://localhost:5173"]
 

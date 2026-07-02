@@ -1,8 +1,9 @@
-"""Pydantic schemas for the clients/sessions API."""
+"""Pydantic schemas for the clients/sessions/documents API."""
 
+import json
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # --- Sessions ---
@@ -35,6 +36,31 @@ class SessionRead(BaseModel):
     error_message: str | None
     created_at: datetime
     updated_at: datetime
+
+
+# --- Documents ---
+
+
+class DocumentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    session_id: int
+    doc_type: str
+    title: str
+    content: dict  # Tiptap document JSON
+    updated_at: datetime
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def _parse_content(cls, value):
+        # Stored as a JSON string in SQLite; served as a real object.
+        return json.loads(value) if isinstance(value, str) else value
+
+
+class DocumentUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    content: dict | None = None
 
 
 # --- Clients ---

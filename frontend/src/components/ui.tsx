@@ -91,6 +91,8 @@ const chipStyles: Record<string, { label: string; className: string }> = {
   recording: { label: '● Recording', className: 'bg-accent text-white animate-pulse' },
   transcribing: { label: 'Transcribing…', className: 'bg-accent/15 text-accent animate-pulse' },
   transcribed: { label: 'Transcribed', className: 'bg-heading/15 text-heading' },
+  generating: { label: 'Generating docs…', className: 'bg-accent/15 text-accent animate-pulse' },
+  docs_ready: { label: 'Docs ready', className: 'bg-heading text-white' },
   error: { label: 'Error', className: 'bg-accent text-white' },
 }
 

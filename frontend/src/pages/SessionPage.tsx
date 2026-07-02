@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, formatDate, formatDuration } from '../api'
-import type { Client, RecordingPreflight, Session } from '../api'
+import type { Client, RecordingPreflight, Session, SessionDocument } from '../api'
 import { Button, Card, ConfirmButton, ErrorNote, StatusChip } from '../components/ui'
+import DocEditor from '../components/DocEditor'
 
 const ACCEPT = '.m4a,.mp3,.wav,.mp4,.aac,.flac,.ogg,.webm'
 
@@ -323,15 +324,34 @@ function UploadCard({ session, onStarted }: { session: Session; onStarted: () =>
   )
 }
 
-const STAGES: Record<string, string> = {
+const TRANSCRIPTION_STAGES: Record<string, string> = {
   uploaded: 'Audio ready',
   transcribing: 'Transcribing with Deepgram',
   storing: 'Saving transcript',
 }
 
-function ProgressCard({ sessionId, onFinished }: { sessionId: number; onFinished: () => void }) {
+const GENERATION_STAGES: Record<string, string> = {
+  analyzing: 'Analyzing the transcript',
+  writing_summary: 'Writing the summary',
+  writing_homework: 'Writing the homework',
+  writing_next: 'Preparing the next session',
+  storing: 'Saving documents',
+}
+
+function ProgressCard({
+  sessionId,
+  title,
+  stages,
+  onFinished,
+}: {
+  sessionId: number
+  title: string
+  stages: Record<string, string>
+  onFinished: () => void
+}) {
+  const firstStage = Object.keys(stages)[0]
   const [stage, setStage] = useState<{ stage: string; detail: string }>({
-    stage: 'uploaded',
+    stage: firstStage,
     detail: '',
   })
 
@@ -352,12 +372,12 @@ function ProgressCard({ sessionId, onFinished }: { sessionId: number; onFinished
     return () => source.close()
   }, [sessionId, onFinished])
 
-  const steps = Object.keys(STAGES)
+  const steps = Object.keys(stages)
   const current = steps.indexOf(stage.stage)
 
   return (
     <Card className="mt-6">
-      <h3 className="text-lg">Transcribing…</h3>
+      <h3 className="text-lg">{title}</h3>
       <div className="mt-4 space-y-3">
         {steps.map((step, i) => {
           const state = i < current ? 'done' : i === current ? 'active' : 'pending'
@@ -373,13 +393,116 @@ function ProgressCard({ sessionId, onFinished }: { sessionId: number; onFinished
                 }`}
               />
               <span className={`text-sm ${state === 'pending' ? 'text-ink/40' : 'text-ink'}`}>
-                {STAGES[step]}
+                {stages[step]}
               </span>
             </div>
           )
         })}
       </div>
       {stage.detail && <p className="mt-4 text-xs text-ink/50">{stage.detail}</p>}
+    </Card>
+  )
+}
+
+function GenerateDocsCard({ session, onStarted }: { session: Session; onStarted: () => void }) {
+  const [starting, setStarting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const generate = async () => {
+    setStarting(true)
+    setError(null)
+    try {
+      await api.generateDocuments(session.id)
+      onStarted()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not start generation.')
+      setStarting(false)
+    }
+  }
+
+  // A failed generation falls back to status "transcribed" with the reason here
+  const previousFailure = session.error_message
+
+  return (
+    <Card className="mt-6">
+      <h3 className="text-lg">Session documents</h3>
+      <p className="mt-2 text-sm text-ink/70">
+        Generate the summary, homework and next-session preparation from the
+        transcript. You can edit everything afterwards.
+      </p>
+      {previousFailure && <ErrorNote message={previousFailure} />}
+      <div className="mt-4">
+        <Button onClick={() => void generate()} disabled={starting}>
+          {starting ? 'Starting…' : previousFailure ? 'Try again' : '✦ Generate documents'}
+        </Button>
+      </div>
+      <ErrorNote message={error} />
+    </Card>
+  )
+}
+
+const DOC_TABS: { type: SessionDocument['doc_type']; label: string }[] = [
+  { type: 'summary', label: 'Summary' },
+  { type: 'homework', label: 'Homework' },
+  { type: 'next_session', label: 'Next Session' },
+]
+
+function DocumentsCard({ session, onRegenerate }: { session: Session; onRegenerate: () => void }) {
+  const [documents, setDocuments] = useState<SessionDocument[] | null>(null)
+  const [active, setActive] = useState<SessionDocument['doc_type']>('summary')
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    api
+      .listDocuments(session.id)
+      .then(setDocuments)
+      .catch((e) => setError(e instanceof Error ? e.message : 'Could not load documents.'))
+  }, [session.id])
+
+  const regenerate = async () => {
+    try {
+      await api.generateDocuments(session.id)
+      onRegenerate()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not restart generation.')
+    }
+  }
+
+  const current = documents?.find((d) => d.doc_type === active)
+
+  return (
+    <Card className="mt-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg">Session documents</h3>
+        <ConfirmButton label="Regenerate all" onConfirm={() => void regenerate()} />
+      </div>
+      <p className="mt-1 text-xs text-ink/50">
+        Regenerating replaces all three documents — including your edits.
+      </p>
+      <div className="mt-4 flex gap-2 border-b border-line">
+        {DOC_TABS.map((tab) => (
+          <button
+            key={tab.type}
+            type="button"
+            onClick={() => setActive(tab.type)}
+            className={`-mb-px rounded-t-lg border-x border-t px-4 py-2 font-heading text-sm font-bold transition-colors ${
+              active === tab.type
+                ? 'border-line bg-cream text-heading'
+                : 'border-transparent text-ink/50 hover:text-ink'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div className="pt-5">
+        {error && <ErrorNote message={error} />}
+        {!documents && !error && <p className="text-sm text-ink/60">Loading documents…</p>}
+        {documents && !current && (
+          <p className="text-sm text-ink/60">This document was not generated yet.</p>
+        )}
+        {current && <DocEditor key={current.id} document={current} />}
+      </div>
     </Card>
   )
 }
@@ -529,7 +652,21 @@ export default function SessionPage() {
       )}
 
       {session.status === 'transcribing' && (
-        <ProgressCard sessionId={session.id} onFinished={() => void load()} />
+        <ProgressCard
+          sessionId={session.id}
+          title="Transcribing…"
+          stages={TRANSCRIPTION_STAGES}
+          onFinished={() => void load()}
+        />
+      )}
+
+      {session.status === 'generating' && (
+        <ProgressCard
+          sessionId={session.id}
+          title="Generating documents…"
+          stages={GENERATION_STAGES}
+          onFinished={() => void load()}
+        />
       )}
 
       {session.status === 'error' && !replacing && (
@@ -547,6 +684,7 @@ export default function SessionPage() {
 
       {session.status === 'transcribed' && (
         <>
+          {!replacing && <GenerateDocsCard session={session} onStarted={() => void load()} />}
           <TranscriptCard sessionId={session.id} />
           {!replacing && (
             <div className="mt-6">
@@ -555,6 +693,13 @@ export default function SessionPage() {
               </Button>
             </div>
           )}
+        </>
+      )}
+
+      {session.status === 'docs_ready' && (
+        <>
+          <DocumentsCard session={session} onRegenerate={() => void load()} />
+          <TranscriptCard sessionId={session.id} />
         </>
       )}
     </div>

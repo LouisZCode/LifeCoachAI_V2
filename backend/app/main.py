@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.db import init_db
 from app.observability import langfuse_status, shutdown_langfuse
-from app.routers import clients, recording, sessions
+from app.routers import clients, documents, recording, sessions
 
 
 @asynccontextmanager
@@ -32,6 +32,7 @@ app.add_middleware(
 app.include_router(clients.router)
 app.include_router(sessions.router)
 app.include_router(recording.router)
+app.include_router(documents.router)
 
 
 @app.get("/api/health")

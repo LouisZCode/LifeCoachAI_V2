@@ -34,6 +34,21 @@ export type Health = {
   langfuse: { configured: boolean; connected: boolean }
 }
 
+// Tiptap/ProseMirror document JSON — use the editor's own type so content
+// round-trips between the API and useEditor without casts.
+import type { JSONContent } from '@tiptap/react'
+
+export type TiptapDoc = JSONContent
+
+export type SessionDocument = {
+  id: number
+  session_id: number
+  doc_type: 'summary' | 'homework' | 'next_session'
+  title: string
+  content: TiptapDoc
+  updated_at: string
+}
+
 export type RecordingPreflight = {
   mic: { found: boolean; name: string | null }
   blackhole: { found: boolean; name: string | null }
@@ -108,6 +123,16 @@ export const api = {
     request<Session>(`/api/sessions/${sessionId}/transcribe`, { method: 'POST' }),
   getTranscript: (sessionId: number) =>
     rawRequest(`/api/sessions/${sessionId}/transcript`).then((res) => res.text()),
+
+  generateDocuments: (sessionId: number) =>
+    request<Session>(`/api/sessions/${sessionId}/documents/generate`, { method: 'POST' }),
+  listDocuments: (sessionId: number) =>
+    request<SessionDocument[]>(`/api/sessions/${sessionId}/documents`),
+  updateDocument: (documentId: number, data: { title?: string; content?: TiptapDoc }) =>
+    request<SessionDocument>(`/api/documents/${documentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 
   recordingPreflight: () => request<RecordingPreflight>('/api/recording/preflight'),
   recordingStatus: () => request<RecordingStatus>('/api/recording/status'),

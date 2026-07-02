@@ -1,8 +1,9 @@
 # LifeCoach AI V2
 
 Local-first assistant for a life coaching practice: record or upload client
-calls, get coach/client-labeled transcripts (Deepgram Nova-3), and — coming in
-later phases — session documents generated from them.
+calls, get coach/client-labeled transcripts (Deepgram Nova-3), and generate
+editable session documents (summary, homework, next-session prep) from them
+via OpenRouter — with branded PDF export coming in a later phase.
 
 - **Backend**: FastAPI + SQLite (`backend/`), managed with [uv](https://docs.astral.sh/uv/)
 - **Frontend**: React + Tailwind (`frontend/`), built with Vite
@@ -24,15 +25,18 @@ cd ~/Applications/LifeCoach_V2
 chmod +x LifeCoachV2.command
 ```
 
-**Step 2 — API key** (one time)
+**Step 2 — API keys** (one time)
 
 ```bash
 cat > .env << 'EOF'
 DEEPGRAM_API_KEY=your-deepgram-key-here
+OPENROUTER_API_KEY=your-openrouter-key-here
 EOF
 ```
 
-(The same Deepgram key V1 uses is fine.)
+(The same Deepgram key V1 uses is fine. `OPENROUTER_API_KEY` powers document
+generation — create one at openrouter.ai. `.env` is untracked, so updates
+never touch it; on an existing install just append the new line.)
 
 **Step 3 — Call-recording audio setup** (one time, only for in-app recording)
 
@@ -75,7 +79,8 @@ npm run dev --prefix frontend                            # Vite on :5173, proxie
 ```
 
 Open http://localhost:5173. A `.env` in the repo root provides
-`DEEPGRAM_API_KEY` (see `backend/app/config.py` for all settings).
+`DEEPGRAM_API_KEY` and `OPENROUTER_API_KEY` (see `backend/app/config.py` for
+all settings, including the per-stage model choices for doc generation).
 
 In production mode (Maria's install) there is no Vite: the GitHub Action
 commits `frontend/dist` to the `release` branch and FastAPI serves it directly

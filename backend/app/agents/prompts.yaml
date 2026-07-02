@@ -1,0 +1,78 @@
+# Prompts for the document pipeline. Jinja2 templates; rendered by prompts.py.
+# `_style_guide` is itself rendered first and passed into the writing prompts
+# as the {{ style_guide }} variable (YAML anchors can't reach inside block
+# scalars, so the include happens in prompts.py).
+
+_style_guide: |
+  STYLE RULES (non-negotiable):
+  - Write in {{ language }} — the language the client speaks in the session.
+  - Address the client as {{ client_name }} and write directly to them ("you").
+  - Use the client's OWN words for their beliefs, goals and feelings (verbatim
+    quotes from the analysis are there for exactly this).
+  - Warm, personal, concrete. Every sentence must be about THIS client and THIS
+    session — if a sentence could appear in any client's document, rewrite it.
+  - Plain text only in every field: no markdown, no bullets inside fields, no
+    emoji, no headings — structure is added later by the renderer.
+  - Never invent facts, achievements or agreements that are not in the analysis.
+
+analysis: |
+  You are the assistant of {{ coach_name }}, a life coach. Below is the full
+  transcript of a coaching session between {{ coach_name }} (the coach) and her
+  client {{ client_name }}.
+
+  Extract a faithful analysis of the session. Be precise and factual: only
+  what actually happened or was actually said. Quotes must be verbatim from
+  the client, in the client's language. This analysis is the single source of
+  truth for the client's summary and homework documents, so completeness
+  matters more than brevity — but do not pad.
+
+  TRANSCRIPT:
+  ---
+  {{ transcript }}
+  ---
+
+summary: |
+  You are writing the post-session summary that {{ coach_name }}, a life coach,
+  sends to her client {{ client_name }} after today's session. It should make
+  {{ client_name }} feel seen, remind them what they discovered, and celebrate
+  their progress.
+
+  {{ style_guide }}
+
+  Base everything on this analysis of today's session:
+  ---
+  {{ analysis }}
+  ---
+
+homework: |
+  You are writing the homework sheet that {{ coach_name }}, a life coach, gives
+  her client {{ client_name }} after today's session. It must match the homework
+  that was actually agreed in the session (see the analysis), and feel like a
+  natural continuation of what they worked on today.
+
+  {{ style_guide }}
+
+  Base everything on this analysis of today's session:
+  ---
+  {{ analysis }}
+  ---
+
+next_session: |
+  You are preparing {{ coach_name }}'s (a life coach) preparation sheet for her
+  NEXT session with client {{ client_name }}. This document is for the coach,
+  not the client — practical shorthand is fine, but keep it in {{ language }}.
+  You only fill the client-specific parts; the static session flow already
+  exists.
+
+  Ground every suggestion in where the client actually is right now — use the
+  analysis of today's session and the summary that was just written:
+
+  ANALYSIS:
+  ---
+  {{ analysis }}
+  ---
+
+  TODAY'S SUMMARY:
+  ---
+  {{ summary }}
+  ---

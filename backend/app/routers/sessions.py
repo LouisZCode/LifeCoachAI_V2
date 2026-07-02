@@ -138,7 +138,7 @@ def _db_stage(session_id: int) -> dict:
         session = db.get(models.Session, session_id)
         if session is None:
             return {"stage": "error", "detail": "Session not found"}
-        if session.status == "transcribed":
+        if session.status in ("transcribed", "docs_ready"):
             return {"stage": "done", "detail": ""}
         if session.status == "error":
             return {"stage": "error", "detail": session.error_message or ""}
