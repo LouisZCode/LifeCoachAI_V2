@@ -1,0 +1,38 @@
+# On every push to main: build the React frontend and publish a `release`
+# branch = main + frontend/dist. Maria's install tracks that branch, so her
+# Mac never needs Node — the launcher just git-pulls and runs the backend,
+# which serves the pre-built frontend itself.
+name: Build release branch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        run: |
+          npm ci --prefix frontend
+          npm run build --prefix frontend
+
+      - name: Publish release branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B release
+          git add -f frontend/dist
+          git commit -m "Release build of ${GITHUB_SHA::7}"
+          git push -f origin release
