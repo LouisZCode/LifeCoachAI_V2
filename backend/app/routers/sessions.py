@@ -64,8 +64,8 @@ def upload_audio(
     db: DbSession = Depends(get_db),
 ):
     session = _get_session_or_404(session_id, db)
-    if session.status == "transcribing":
-        raise HTTPException(status_code=409, detail="Transcription already running")
+    if session.status in ("transcribing", "recording"):
+        raise HTTPException(status_code=409, detail=f"Session is busy ({session.status})")
 
     suffix = ("." + file.filename.rsplit(".", 1)[-1].lower()) if file.filename and "." in file.filename else ""
     if suffix not in AUDIO_EXTENSIONS:
@@ -85,6 +85,7 @@ def upload_audio(
 
     session.audio_filename = file.filename
     session.audio_path = audio_rel
+    session.audio_source = "uploaded"
     session.transcript_path = None
     session.duration_seconds = None
     session.error_message = None
@@ -104,8 +105,8 @@ def retry_transcription(
     db: DbSession = Depends(get_db),
 ):
     session = _get_session_or_404(session_id, db)
-    if session.status == "transcribing":
-        raise HTTPException(status_code=409, detail="Transcription already running")
+    if session.status in ("transcribing", "recording"):
+        raise HTTPException(status_code=409, detail=f"Session is busy ({session.status})")
     if not session.audio_path:
         raise HTTPException(status_code=422, detail="No audio uploaded for this session")
 

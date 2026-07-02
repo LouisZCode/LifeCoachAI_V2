@@ -39,10 +39,13 @@ class Session(Base):
     title: Mapped[str] = mapped_column(String(200), default="")
     session_date: Mapped[date]
     notes: Mapped[str] = mapped_column(Text, default="")
-    # Lifecycle: new -> transcribing -> transcribed | error (docs_ready in Phase 3)
+    # Lifecycle: new -> recording -> transcribing -> transcribed | error
+    # (docs_ready in Phase 3)
     status: Mapped[str] = mapped_column(String(20), default="new")
     audio_filename: Mapped[str | None] = mapped_column(String(300))
     audio_path: Mapped[str | None] = mapped_column(String(500))
+    # "recorded" (in-app, stereo coach/client channels) or "uploaded"
+    audio_source: Mapped[str | None] = mapped_column(String(20))
     transcript_path: Mapped[str | None] = mapped_column(String(500))
     duration_seconds: Mapped[float | None]
     error_message: Mapped[str | None] = mapped_column(Text)

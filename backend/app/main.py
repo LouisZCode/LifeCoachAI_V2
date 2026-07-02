@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.db import init_db
 from app.observability import langfuse_status, shutdown_langfuse
-from app.routers import clients, sessions
+from app.routers import clients, recording, sessions
 
 
 @asynccontextmanager
@@ -28,6 +28,7 @@ app.add_middleware(
 
 app.include_router(clients.router)
 app.include_router(sessions.router)
+app.include_router(recording.router)
 
 
 @app.get("/api/health")

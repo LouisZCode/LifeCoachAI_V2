@@ -11,6 +11,9 @@ dependencies = [
     "sqlalchemy>=2.0",
     "deepgram-sdk>=5.3",
     "python-multipart>=0.0.12",
+    "sounddevice>=0.5",
+    "soundfile>=0.12",
+    "numpy>=2.0",
 ]
 
 [build-system]

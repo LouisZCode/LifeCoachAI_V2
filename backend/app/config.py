@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     # set to "de"/"en" to pin a single language
     transcription_language: str = "multi"
 
+    # In-app call recording (mic = left channel, BlackHole = right channel).
+    # Requires the BlackHole 2ch driver plus a Multi-Output Device named
+    # "Recording Output" (headphones + BlackHole) selected as system output.
+    coach_name: str = "Maria"
+    blackhole_device_name: str = "BlackHole 2ch"
+    recording_output_name: str = "Recording Output"
+    recording_sample_rate: int = 16_000
+    recording_max_minutes: float = 120.0
+
     # Vite dev server origin (only needed if the frontend bypasses the dev proxy)
     cors_origins: list[str] = ["http://localhost:5173"]
 

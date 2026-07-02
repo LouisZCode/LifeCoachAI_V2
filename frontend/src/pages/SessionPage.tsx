@@ -1,10 +1,258 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, formatDate, formatDuration } from '../api'
-import type { Client, Session } from '../api'
-import { Button, Card, ErrorNote, StatusChip } from '../components/ui'
+import type { Client, RecordingPreflight, Session } from '../api'
+import { Button, Card, ConfirmButton, ErrorNote, StatusChip } from '../components/ui'
 
 const ACCEPT = '.m4a,.mp3,.wav,.mp4,.aac,.flac,.ogg,.webm'
+
+function formatElapsed(seconds: number): string {
+  const s = Math.floor(seconds)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const rest = s % 60
+  const mmss = `${String(m).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
+  return h > 0 ? `${h}:${mmss}` : mmss
+}
+
+function CheckRow({ ok, label, hint }: { ok: boolean; label: string; hint?: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span
+        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${ok ? 'bg-heading' : 'bg-accent'}`}
+      />
+      <div>
+        <p className={`text-sm ${ok ? 'text-ink' : 'text-accent'}`}>{label}</p>
+        {!ok && hint && <p className="mt-1 text-xs text-ink/60">{hint}</p>}
+      </div>
+    </div>
+  )
+}
+
+function RecordCard({ session, onStarted }: { session: Session; onStarted: () => void }) {
+  const [preflight, setPreflight] = useState<RecordingPreflight | null>(null)
+  const [starting, setStarting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    const check = () =>
+      api
+        .recordingPreflight()
+        .then((p) => alive && setPreflight(p))
+        .catch(() => alive && setPreflight(null))
+    void check()
+    const timer = setInterval(check, 2000)
+    return () => {
+      alive = false
+      clearInterval(timer)
+    }
+  }, [])
+
+  const start = async () => {
+    setStarting(true)
+    setError(null)
+    try {
+      await api.startRecording(session.id)
+      onStarted()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not start recording.')
+      setStarting(false)
+    }
+  }
+
+  const busyElsewhere =
+    preflight?.active_session_id != null && preflight.active_session_id !== session.id
+
+  return (
+    <Card className="mt-6">
+      <h3 className="text-lg">Record the call</h3>
+      {!preflight ? (
+        <p className="mt-3 text-sm text-ink/60">Checking audio devices…</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <CheckRow
+            ok={preflight.mic.found}
+            label={
+              preflight.mic.found
+                ? `Microphone: ${preflight.mic.name}`
+                : 'No microphone found'
+            }
+            hint="Pick a microphone in System Settings → Sound → Input."
+          />
+          <CheckRow
+            ok={preflight.blackhole.found}
+            label={
+              preflight.blackhole.found
+                ? `Call audio: ${preflight.blackhole.name}`
+                : 'BlackHole 2ch not installed'
+            }
+            hint="Install it with 'brew install blackhole-2ch', then in Audio MIDI Setup create a Multi-Output Device named 'Recording Output' that combines your headphones + BlackHole 2ch."
+          />
+          <CheckRow
+            ok={preflight.output.ok}
+            label={
+              preflight.output.ok
+                ? `Sound output: ${preflight.output.name}`
+                : `Sound output is '${preflight.output.name ?? 'unknown'}' — switch to 'Recording Output'`
+            }
+            hint="System Settings → Sound → Output → 'Recording Output', before joining the call. Otherwise the client's side won't be captured."
+          />
+        </div>
+      )}
+      <div className="mt-5 flex items-center gap-3">
+        <Button
+          onClick={() => void start()}
+          disabled={!preflight?.ready || starting || busyElsewhere}
+        >
+          {starting ? 'Starting…' : '● Start recording'}
+        </Button>
+        {busyElsewhere && (
+          <span className="text-xs text-ink/60">
+            A recording is already running in another session.
+          </span>
+        )}
+      </div>
+      <ErrorNote message={error} />
+    </Card>
+  )
+}
+
+function LevelMeter({ label, level }: { label: string; level: number }) {
+  const pct = Math.min(100, Math.round(Math.sqrt(Math.max(level, 0)) * 250))
+  return (
+    <div>
+      <p className="mb-1 font-heading text-xs font-bold uppercase tracking-wide text-ink/60">
+        {label}
+      </p>
+      <div className="h-2 overflow-hidden rounded-full bg-line">
+        <div
+          className="h-full rounded-full bg-heading transition-[width] duration-150"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function ActiveRecordingCard({
+  session,
+  clientName,
+  onFinished,
+}: {
+  session: Session
+  clientName: string
+  onFinished: () => void
+}) {
+  const [elapsed, setElapsed] = useState(0)
+  const [micLevel, setMicLevel] = useState(0)
+  const [systemLevel, setSystemLevel] = useState(0)
+  const [output, setOutput] = useState<{ name: string | null; ok: boolean } | null>(null)
+  const [stale, setStale] = useState(false)
+  const [stopping, setStopping] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    const timer = setInterval(() => {
+      api
+        .recordingStatus()
+        .then((s) => {
+          if (!alive) return
+          if (!s.active || s.session_id !== session.id) {
+            setStale(true)
+            return
+          }
+          setStale(false)
+          setElapsed(s.elapsed_seconds ?? 0)
+          setMicLevel(s.mic_level ?? 0)
+          setSystemLevel(s.system_level ?? 0)
+          setOutput(s.output ?? null)
+        })
+        .catch(() => undefined)
+    }, 400)
+    return () => {
+      alive = false
+      clearInterval(timer)
+    }
+  }, [session.id])
+
+  const stop = async () => {
+    setStopping(true)
+    setError(null)
+    try {
+      await api.stopRecording(session.id)
+      onFinished()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not stop the recording.')
+      setStopping(false)
+    }
+  }
+
+  const reset = async () => {
+    try {
+      await api.cancelRecording(session.id)
+      onFinished()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not reset the session.')
+    }
+  }
+
+  if (stale) {
+    return (
+      <Card className="mt-6">
+        <h3 className="text-lg">Recording interrupted</h3>
+        <p className="mt-2 text-sm text-ink/70">
+          The recording is no longer running (the backend may have restarted). No audio
+          was saved — reset the session to start over.
+        </p>
+        <div className="mt-4">
+          <Button onClick={() => void reset()}>Reset session</Button>
+        </div>
+        <ErrorNote message={error} />
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="mt-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg">Recording…</h3>
+        <span className="font-heading text-2xl font-bold tabular-nums text-accent">
+          {formatElapsed(elapsed)}
+        </span>
+      </div>
+      <div className="mt-5 space-y-4">
+        <LevelMeter label="Maria (microphone)" level={micLevel} />
+        <LevelMeter label={`${clientName} (call audio)`} level={systemLevel} />
+      </div>
+      {output &&
+        (output.ok ? (
+          <p className="mt-4 flex items-center gap-2 text-xs text-heading">
+            <span className="h-2 w-2 rounded-full bg-heading" />
+            Sound output: {output.name} — all ok
+          </p>
+        ) : (
+          <p className="mt-4 flex items-start gap-2 text-sm font-bold text-accent">
+            <span className="mt-1 h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-accent" />
+            Sound output switched to '{output.name ?? 'unknown'}' — the client's voice
+            is NOT being recorded! Set it back to 'Recording Output' in System
+            Settings → Sound.
+          </p>
+        ))}
+      <p className="mt-3 text-xs text-ink/50">
+        Both bars should move while each side is speaking.
+      </p>
+      <div className="mt-5 flex items-center gap-2">
+        <Button onClick={() => void stop()} disabled={stopping}>
+          {stopping ? 'Saving…' : '■ Stop & transcribe'}
+        </Button>
+        <ConfirmButton label="Discard" onConfirm={() => void reset()} />
+      </div>
+      <ErrorNote message={error} />
+    </Card>
+  )
+}
 
 function UploadCard({ session, onStarted }: { session: Session; onStarted: () => void }) {
   const [file, setFile] = useState<File | null>(null)
@@ -28,7 +276,7 @@ function UploadCard({ session, onStarted }: { session: Session; onStarted: () =>
 
   return (
     <Card className="mt-6">
-      <h3 className="text-lg">Session audio</h3>
+      <h3 className="text-lg">Or upload an existing recording</h3>
       <div
         className={`mt-4 rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
           dragging ? 'border-accent bg-accent/5' : 'border-line'
@@ -76,7 +324,7 @@ function UploadCard({ session, onStarted }: { session: Session; onStarted: () =>
 }
 
 const STAGES: Record<string, string> = {
-  uploaded: 'Audio saved',
+  uploaded: 'Audio ready',
   transcribing: 'Transcribing with Deepgram',
   storing: 'Saving transcript',
 }
@@ -266,7 +514,18 @@ export default function SessionPage() {
       <ErrorNote message={error} />
 
       {(session.status === 'new' || replacing) && (
-        <UploadCard session={session} onStarted={() => void load()} />
+        <>
+          <RecordCard session={session} onStarted={() => void load()} />
+          <UploadCard session={session} onStarted={() => void load()} />
+        </>
+      )}
+
+      {session.status === 'recording' && (
+        <ActiveRecordingCard
+          session={session}
+          clientName={client ? client.name.split(' ')[0] : 'Client'}
+          onFinished={() => void load()}
+        />
       )}
 
       {session.status === 'transcribing' && (

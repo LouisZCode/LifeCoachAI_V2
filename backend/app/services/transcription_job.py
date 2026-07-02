@@ -21,7 +21,17 @@ def run_transcription(session_id: int) -> None:
 
         progress.set_stage(session_id, "transcribing", "Sending audio to Deepgram")
         transcriber = get_transcriber()
-        result = transcriber.transcribe(settings.data_dir / session.audio_path)
+
+        # In-app recordings are stereo with a fixed channel layout
+        # (left = coach mic, right = client), so speakers get real names.
+        channel_labels = None
+        if session.audio_source == "recorded":
+            client_first_name = session.client.name.split()[0] if session.client.name else "Client"
+            channel_labels = (settings.coach_name, client_first_name)
+
+        result = transcriber.transcribe(
+            settings.data_dir / session.audio_path, channel_labels=channel_labels
+        )
 
         progress.set_stage(session_id, "storing", "Saving transcript")
         transcript_rel = f"sessions/{session_id}/transcript.md"

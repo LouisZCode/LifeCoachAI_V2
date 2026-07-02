@@ -8,6 +8,7 @@ export type Session = {
   notes: string
   status: string
   audio_filename: string | null
+  audio_source: string | null
   duration_seconds: number | null
   error_message: string | null
   created_at: string
@@ -31,6 +32,23 @@ export type Health = {
   app: string
   version: string
   langfuse: { configured: boolean; connected: boolean }
+}
+
+export type RecordingPreflight = {
+  mic: { found: boolean; name: string | null }
+  blackhole: { found: boolean; name: string | null }
+  output: { name: string | null; ok: boolean }
+  ready: boolean
+  active_session_id: number | null
+}
+
+export type RecordingStatus = {
+  active: boolean
+  session_id?: number
+  elapsed_seconds?: number
+  mic_level?: number
+  system_level?: number
+  output?: { name: string | null; ok: boolean }
 }
 
 async function rawRequest(path: string, init?: RequestInit): Promise<Response> {
@@ -90,6 +108,15 @@ export const api = {
     request<Session>(`/api/sessions/${sessionId}/transcribe`, { method: 'POST' }),
   getTranscript: (sessionId: number) =>
     rawRequest(`/api/sessions/${sessionId}/transcript`).then((res) => res.text()),
+
+  recordingPreflight: () => request<RecordingPreflight>('/api/recording/preflight'),
+  recordingStatus: () => request<RecordingStatus>('/api/recording/status'),
+  startRecording: (sessionId: number) =>
+    request<Session>(`/api/sessions/${sessionId}/recording/start`, { method: 'POST' }),
+  stopRecording: (sessionId: number) =>
+    request<Session>(`/api/sessions/${sessionId}/recording/stop`, { method: 'POST' }),
+  cancelRecording: (sessionId: number) =>
+    request<Session>(`/api/sessions/${sessionId}/recording/cancel`, { method: 'POST' }),
 }
 
 export function formatDuration(seconds: number): string {

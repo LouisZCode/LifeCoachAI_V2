@@ -88,6 +88,7 @@ export function ErrorNote({ message }: { message: string | null }) {
 
 const chipStyles: Record<string, { label: string; className: string }> = {
   new: { label: 'New', className: 'bg-parchment text-ink/60' },
+  recording: { label: '● Recording', className: 'bg-accent text-white animate-pulse' },
   transcribing: { label: 'Transcribing…', className: 'bg-accent/15 text-accent animate-pulse' },
   transcribed: { label: 'Transcribed', className: 'bg-heading/15 text-heading' },
   error: { label: 'Error', className: 'bg-accent text-white' },
